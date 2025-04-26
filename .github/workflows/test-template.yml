@@ -1,0 +1,51 @@
+name: Test and Validate Cookiecutter Template
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, 3.10, 3.11]
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install cookiecutter
+      run: |
+        pip install cookiecutter
+
+    - name: Generate project from template
+      run: |
+        cookiecutter . --no-input --output-dir generated_project
+
+    - name: Set up Generated Project
+      working-directory: generated_project/{{cookiecutter.project_slug}}
+      run: |
+        echo "Setting up generated project (if needed)..."
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+
+    - name: Lint Generated Code (basic)
+      working-directory: generated_project/{{cookiecutter.project_slug}}
+      run: |
+        echo "Running basic lint checks..."
+        pip install flake8
+        flake8 . || echo "Lint warnings found, but not failing the build"
+
+    - name: Cleanup Generated Project
+      run: |
+        echo "Cleaning up generated project..."
+        rm -rf generated_project
